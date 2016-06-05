@@ -10,7 +10,7 @@ echo "Configuring Packages...Please wait. The output is in ./configure.out"
 grep -rl 'src dic doc' Makefile | xargs sed -i 's/src dic doc/src dic/g'
 
 echo "Compiling Packages...Please wait. The output is in ./Makefile.out"
-
-make >& ./Makefile.out
+make clean >& ./Makefile.out
+make  >> ./Makefile.out  2>&1
 
 sudo make install
