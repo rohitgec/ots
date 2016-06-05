@@ -29,6 +29,7 @@
 #include "ots-config.h"
 
 void print_about(FILE * stream,OtsArticle * Doc);
+void print_keywords(OtsArticle *Art, char* filename);
 
 int main(int argc, char **argv)
 {
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
   int about = FALSE;
   int version = FALSE;
 	
-  const char *const *args;
+  const char *const *args=NULL;
 
 	GOptionContext *context = NULL;
 	GError *error = NULL;
@@ -87,7 +88,12 @@ int main(int argc, char **argv)
 		g_option_context_free(context);
       exit (0);
     }
-
+  
+  if(args==NULL) 
+    {
+       printf("\nInvalid number of arguments. Use --help to see options\n");
+       exit(1);
+    }
   if (args)
     while (args[n_args] != NULL)
       n_args++;
@@ -143,13 +149,25 @@ int main(int argc, char **argv)
 
   ots_parse_file (input_stream, Art);	/* read article from stdin , put it in struct Article */
   ots_grade_doc (Art);					/* grade each sentence (how relevent is it to the text) */
+
+/*
+  int i;
+
+  for (i=0;i<1000000;i++)
+  {
+
+    printf("\n word = %s ", ots_word_in_list(Art->ImpWords,i));
+
+  }
+*/
+
   ots_highlight_doc (Art, sumPercent);	/* highlight what we are going to print 0% - 100% of the words */
 
 
 	if (html)
 		ots_print_HTML(output_stream, Art);	/* print article in html form */
 	else if (keywords)
-		printf("deprecated\n");	/* print_keywords(output_stream,Art); */
+		print_keywords(Art, input_file); 
 	else if (about)
 		print_about(output_stream, Art);
 	else
@@ -167,7 +185,79 @@ int main(int argc, char **argv)
   return 0;
 }
 
+/*note this function only returns the first line */
+void run_command( char *cmd, char *cmd_out )
+{
 
+  FILE *fp;
+  memset (cmd_out,0 , sizeof(cmd_out));
+  /* Open the command for reading. */
+  fp = popen(cmd, "r");
+  if (fp == NULL) {
+    printf("Failed to run command\n" );
+    exit(1);
+  }
+  
+  fgets(cmd_out,sizeof(cmd_out)-1, fp);
+
+  /* Read the output a line at a time - output it. */
+  //while (fgets(path, sizeof(path)-1, fp) != NULL) {
+  //  printf("%s", path);
+  //}
+
+  /* close */
+  pclose(fp);
+
+  return;
+}
+
+/*function to fix the words for grep to work properly*/
+void fix_word(char * word)
+{
+ char out_word[1024];
+ int i,in=0;
+ int out=0;
+ for (i=0; i< strlen(word); i++)
+ {
+   if(i==0 && word[i]=='-')
+     {
+     out_word[out++]='\\';
+     out_word[out++]=word[i];
+     }
+   else if (word[i]=='\'')
+     {
+     //skip this character
+     //out_word[out++]='\\';
+     //out_word[out++]=word[i];
+     }
+   else
+     out_word[out++]=word[i];
+ }
+ out_word[out]=0;
+ strcpy(word, out_word);
+
+} 
+
+/*This function will print all the keywords on the screen*/
+void print_keywords(OtsArticle *Art, char* filename)
+{  
+  char cmd[1024];
+  char cmd_out[1024];
+  char *word=NULL;
+  int i=0;
+  
+  while(1){    
+       word= ots_word_in_list(Art->ImpWords,i++);
+       if (word==NULL || strlen(word)==0 ) return;
+       fix_word(word);
+       //printf ("\n word = %s", word);
+       sprintf(cmd, "grep -io '%s' %s 2>/dev/null |wc -l", word, filename);
+       run_command(cmd, cmd_out);
+       //printf("%s   %s   %s   i=%d ",word, cmd, cmd_out, i);
+       printf("%s %s",word, cmd_out);
+  }
+
+}
 void print_about(FILE * stream, OtsArticle * Doc)
 {
     fprintf (stream, "Article talks about \"%s\"\n",Doc->title);

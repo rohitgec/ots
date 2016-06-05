@@ -1,0 +1,16 @@
+#!/bin/bash
+
+sudo apt-get update
+sudo apt-get install -y  build-essential checkinstall autoconf
+sudo apt-get install -y pkg-config
+echo "Configuring Packages...Please wait. The output is in ./configure.out"
+
+./configure >& ./configure_out
+
+grep -rl 'src dic doc' Makefile | xargs sed -i 's/src dic doc/src dic/g'
+
+echo "Compiling Packages...Please wait. The output is in ./Makefile.out"
+
+make >& ./Makefile.out
+
+sudo make install
